@@ -24,11 +24,12 @@ def main(argv):
    	directory = 'packt_ebooks'
    	formats = 'pdf,mobi,epub'
    	includeCode = False
+	proxy = ''
    	errorMessage = 'Usage: downloader.py -e <email> -p <password> [-f <formats> -d <directory> --include-code]'
 
    	# get the command line arguments/options
-	try:	
-  		opts, args = getopt.getopt(argv,"ce:p:d:f:",["email=","pass=","directory=","formats=","include-code"])
+	try:
+  		opts, args = getopt.getopt(argv,"ce:p:d:f:x:",["email=","pass=","directory=","formats=","include-code","proxy="])
 	except getopt.GetoptError:
   		print errorMessage
   		sys.exit(2)
@@ -45,6 +46,8 @@ def main(argv):
 			formats = arg
 		elif opt in ('-c','--include-code'):
 			includeCode = True
+		elif opt in ('-x','--proxy'):
+			proxy = arg
 
 	# do we have the minimum required info
 	if not email or not password:
@@ -53,9 +56,12 @@ def main(argv):
 
 	# create a session
 	session = requests.Session()
-
+	if proxy:
+		print proxy
+		session.proxies.update({'http': proxy})
+		
 	print "Attempting to login..."
-	
+
 	# initial request to get the "csrf token" for the login
 	url = "https://www.packtpub.com/"
 	start_req = session.get(url, verify=True, headers=headers)
@@ -66,9 +72,9 @@ def main(argv):
 
 	# payload for login
 	login_data = dict(
-			email=email, 
-			password=password, 
-			op="Login", 
+			email=email,
+			password=password,
+			op="Login",
 			form_id="packt_user_login_form",
 			form_build_id=form_build_id)
 
@@ -82,7 +88,7 @@ def main(argv):
 	# login successful?
 	if "Register" in books_tree.xpath("//title/text()")[0]:
 		print "Invalid login."
-	
+
 	# we're in, start downloading
 	else:
 		print "Logged in successfully!"
@@ -110,13 +116,13 @@ def main(argv):
 				print '#################################################################'
 				print title.encode(sys.stdout.encoding, errors='replace')
 				print '#################################################################'
-				
+
 				# get the download links
 				pdf = book.xpath(".//div[contains(@class,'download-container')]//a[contains(@href,'/pdf')]/@href")
 				epub = book.xpath(".//div[contains(@class,'download-container')]//a[contains(@href,'/epub')]/@href")
 				mobi = book.xpath(".//div[contains(@class,'download-container')]//a[contains(@href,'/mobi')]/@href")
 				code = book.xpath(".//div[contains(@class,'download-container')]//a[contains(@href,'/code_download')]/@href")
-				
+
 				# pdf
 				if len(pdf) > 0 and 'pdf' in formats:
 					filename = os.path.join(path, title + ".pdf")
